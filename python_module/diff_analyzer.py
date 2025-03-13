@@ -31,13 +31,6 @@ class DiffAnalysis(BaseModel):
     impact: str = Field(description="Potential impact of the changes")
     files_changed: list[str] = Field(description="List of modified files")
 
-@retry(
-    stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=2, min=10, max=30),
-    before=before_log(logger, logging.INFO),
-    after=after_log(logger, logging.INFO),
-    retry=retry_if_exception_type(openai.RateLimitError)
-)
 def _analyze_with_llm(diff: str) -> DiffAnalysis:
     """
     Analyze a git diff using OpenAI's API with retry logic
