@@ -33,37 +33,47 @@ class DiffAnalysis(BaseModel):
 
 def _analyze_with_llm(diff: str) -> DiffAnalysis:
     """
-    Analyze a git diff using OpenAI's API with retry logic
+    Analyze a git diff using OpenAI's API and stream the response
     """
     if not diff.strip():
         raise ValueError("Empty diff provided")
 
     try:
         logger.info("Sending diff to OpenAI API for analysis")
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        stream = client.chat.completions.create(
+            model="gpt-4o",
             messages=[
                 {
-                    "role": "system",
+                    "role": "developer",
                     "content": "You are a code review assistant. Analyze the provided git diff and explain the changes, their potential impact, and any important considerations. Focus on the key changes and their implications."
                 },
                 {
                     "role": "user",
-                    "content": f"Please analyze this git diff and provide a structured response:\n\n{diff}"
+                    "content": f"Please analyze this git diff and provide a structured, terminal-friendly response:\n\n{diff}"
                 }
             ],
             temperature=0.3,
-            max_tokens=1000
+            max_tokens=2048,
+            stream=True
         )
         
         # Extract changed files from diff
         files_changed = [
-            line.split(" ")[1] 
+            line.split(" ")[2][2:]
             for line in diff.split("\n") 
             if line.startswith("diff --git")
         ]
         
-        content = response.choices[0].message.content
+        # Stream and collect the response
+        content = ""
+        print("Analysis:", end="", flush=True)
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                token = chunk.choices[0].delta.content
+                content += token
+                print(token, end="", flush=True)
+        print()  # New line after streaming completes
+        
         summary_lines = content.split("\n")
         
         return DiffAnalysis(

@@ -39,14 +39,14 @@ print(analyze_diff(diff_content))\
         .arg(&script)
         .current_dir(&module_path)
         .output()
-        .context("Failed to execute Python script")?;
+        .context("Failed to execute Python subprocess")?;
 
     // Clean up temporary file
     let _ = fs::remove_file(temp_diff_path);
 
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("Python script failed: {}", error);
+        anyhow::bail!("Python subprocess failed: {}", error);
     }
 
     String::from_utf8(output.stdout)
