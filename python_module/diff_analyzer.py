@@ -31,7 +31,7 @@ class DiffAnalysis(BaseModel):
     impact: str = Field(description="Potential impact of the changes")
     files_changed: list[str] = Field(description="List of modified files")
 
-def _analyze_with_llm(diff: str) -> DiffAnalysis:
+def _analyze_with_llm(diff: str):
     """
     Analyze a git diff using OpenAI's API and stream the response
     """
@@ -64,58 +64,49 @@ def _analyze_with_llm(diff: str) -> DiffAnalysis:
             if line.startswith("diff --git")
         ]
         
-        # Stream and collect the response
+        # Stream the response
         content = ""
-        print("Analysis:", end="", flush=True)
         for chunk in stream:
             if chunk.choices[0].delta.content:
                 token = chunk.choices[0].delta.content
                 content += token
-                print(token, end="", flush=True)
-        print()  # New line after streaming completes
+                yield token
         
-        summary_lines = content.split("\n")
-        
-        return DiffAnalysis(
-            summary=summary_lines[0],
-            impact="\n".join(summary_lines[1:]) if len(summary_lines) > 1 else "No additional impact details provided",
-            files_changed=files_changed
-        )
+        # Yield files changed section
+        yield "\n\nFiles Changed:\n"
+        for file in files_changed:
+            yield f"- {file}\n"
+            
     except openai.RateLimitError as e:
-        logger.error(f"OpenAI API rate limit exceeded: {str(e)}. Retrying with exponential backoff...")
-        raise
+        error_msg = f"OpenAI API rate limit exceeded: {str(e)}. Retrying with exponential backoff..."
+        logger.error(error_msg)
+        yield error_msg
     except openai.APIError as e:
-        logger.error(f"OpenAI API error: {str(e)}")
-        raise RuntimeError(f"OpenAI API error: {str(e)}. Please check your API key and permissions.")
+        error_msg = f"OpenAI API error: {str(e)}. Please check your API key and permissions."
+        logger.error(error_msg)
+        yield error_msg
     except Exception as e:
-        logger.error(f"Unexpected error during analysis: {str(e)}")
-        raise RuntimeError(f"Failed to analyze diff: {str(e)}")
+        error_msg = f"Failed to analyze diff: {str(e)}"
+        logger.error(error_msg)
+        yield error_msg
 
-def analyze_diff(diff: str) -> str:
+def analyze_diff(diff: str):
     """
-    Analyze a git diff and return a human-readable analysis
+    Analyze a git diff and yield tokens as they are generated
     
     Args:
         diff: The git diff to analyze
         
-    Returns:
-        A formatted string containing the analysis
+    Yields:
+        Tokens from the analysis as they are generated
     """
     try:
         logger.info("Starting diff analysis")
-        analysis = _analyze_with_llm(diff)
-        
-        result = f"""
-Summary: {analysis.summary}
-
-Impact and Considerations:
-{analysis.impact}
-
-Files Changed:
-{chr(10).join(f'- {file}' for file in analysis.files_changed)}
-""".strip()
+        yield "Analysis:\n"
+        for token in _analyze_with_llm(diff):
+            yield token
         logger.info("Analysis completed successfully")
-        return result
     except Exception as e:
-        logger.error(f"Failed to analyze diff: {str(e)}")
-        return f"Error analyzing diff: {str(e)}"
+        error_msg = f"Error analyzing diff: {str(e)}"
+        logger.error(error_msg)
+        yield error_msg

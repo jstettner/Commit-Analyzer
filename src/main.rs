@@ -56,8 +56,8 @@ async fn main() -> Result<()> {
             let analysis = python_bridge::analyze_diff(&diff)
                 .context("Failed to analyze diff using LLM")?;
 
-            // Display results
-            println!("\nCommit Analysis:\n{}", analysis);
+            // Analysis is already displayed through streaming
+            let _ = analysis;
         }
     }
     
