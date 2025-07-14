@@ -1,4 +1,4 @@
-# Halidom Brain - Git Commit Analyzer
+# Git Commit Analyzer
 
 A powerful tool that combines Rust and Python to analyze git commits using LLM technology. The tool extracts commit diffs and provides intelligent analysis of code changes, helping teams understand the impact and implications of their code modifications.
 
