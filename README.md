@@ -23,7 +23,7 @@ A powerful tool that combines Rust and Python to analyze git commits using LLM t
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd halidom-brain
+cd commit-analyzer
 ```
 
 2. Set up Python environment:
